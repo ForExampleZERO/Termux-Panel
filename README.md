@@ -35,6 +35,7 @@ cd Termux-Panel
 pip install flask
 python update_pkgdb.py
 python app.py
+```
 
 ## 📢 Telegram Channel
 
