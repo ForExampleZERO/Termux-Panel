@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TERMUX::PANEL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --g: #00ff88;
+  --gd: #00ff8840;
+  --gg: #00ff8812;
+  --r: #ff3355;
+  --c: #00e5ff;
+  --y: #ffdd00;
+  --bg: #030507;
+  --bg2: #070c10;
+  --bg3: #0b1118;
+  --bdr: #142014;
+  --tx: #7a9a7a;
+  --txb: #c0dcc0;
+  --scan: rgba(0,255,136,0.025);
+  --mono: 'Share Tech Mono', monospace;
+  --orb: 'Orbitron', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--mono);overflow:hidden;cursor:crosshair}
+
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,var(--scan) 2px,var(--scan) 4px);
+  animation:scan 10s linear infinite;
+}
+@keyframes scan{to{background-position:0 200px}}
+
+/* ── BOOT ── */
+#boot{
+  position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  padding:24px;gap:5px;animation:bfade .3s ease 3.2s forwards;
+}
+@keyframes bfade{to{opacity:0;pointer-events:none}}
+.bl{font-size:11px;color:var(--g);opacity:0;animation:bshow .05s ease forwards;letter-spacing:.05em}
+.bl:nth-child(1){animation-delay:.05s}.bl:nth-child(2){animation-delay:.15s}
+.bl:nth-child(3){animation-delay:.28s}.bl:nth-child(4){animation-delay:.42s}
+.bl:nth-child(5){animation-delay:.55s}.bl:nth-child(6){animation-delay:.68s}
+.bl:nth-child(7){animation-delay:.80s}.bl:nth-child(8){animation-delay:.92s}
+.bl:nth-child(9){animation-delay:1.05s;color:var(--c)}
+.bl:nth-child(10){animation-delay:1.4s;color:var(--y)}
+.bl:nth-child(11){animation-delay:1.9s;color:var(--g)}
+@keyframes bshow{to{opacity:1}}
+
+/* ── MAIN ── */
+#app{
+  display:flex;flex-direction:column;height:100vh;padding:8px;gap:6px;
+  opacity:0;animation:ashow .4s ease 3.4s forwards;
+}
+@keyframes ashow{to{opacity:1}}
+
+/* ── TOPBAR ── */
+.topbar{
+  flex-shrink:0;
+  background:var(--bg2);
+  border:1px solid var(--g);
+  border-radius:4px;
+  box-shadow:0 0 18px var(--gd),inset 0 0 16px var(--gg);
+  padding:8px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.topbar-row1{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.logo{
+  font-family:var(--orb);font-size:13px;font-weight:900;
+  color:var(--g);letter-spacing:.15em;
+  text-shadow:0 0 10px var(--g),0 0 20px var(--gd);
+  white-space:nowrap;
+}
+.logo em{color:var(--c);font-style:normal}
+.tg-link{
+  font-size:10px;color:var(--c);text-decoration:none;
+  letter-spacing:.08em;
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+  border:1px solid #003a4a;padding:3px 9px;border-radius:2px;
+  background:#00101a;
+  text-shadow:0 0 8px var(--c);
+  animation:tgpulse 2.5s ease infinite;
+  transition:all .2s;
+}
+.tg-link:hover{
+  border-color:var(--c);box-shadow:0 0 14px #00e5ff50;
+  background:#001a28;color:#fff;text-shadow:0 0 12px var(--c);
+}
+.tg-link::before{content:'✈';font-size:11px;display:inline-block;animation:tgfly 2.5s ease infinite}
+@keyframes tgpulse{
+  0%,100%{box-shadow:0 0 6px #00e5ff20;border-color:#003a4a}
+  50%{box-shadow:0 0 16px #00e5ff60;border-color:#005a70}
+}
+@keyframes tgfly{
+  0%,100%{transform:translateX(0) rotate(0deg)}
+  30%{transform:translateX(2px) rotate(-8deg)}
+  60%{transform:translateX(-1px) rotate(4deg)}
+}
+
+.topbar-row2{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr auto;
+  gap:6px;
+  align-items:center;
+}
+.stat-block{
+  display:flex;flex-direction:column;gap:3px;min-width:0;
+}
+.stat-lbl{font-size:9px;color:#3a5a3a;letter-spacing:.08em;white-space:nowrap}
+.stat-val{font-size:10px;color:var(--g);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.bar-row{display:flex;align-items:center;gap:5px}
+.bar-track{flex:1;height:3px;background:var(--bg3);border:1px solid #142014;border-radius:1px;overflow:hidden;min-width:30px}
+.bar-fill{height:100%;background:var(--g);box-shadow:0 0 3px var(--g);transition:width 1.2s ease}
+.bar-fill.w{background:var(--y);box-shadow:0 0 3px var(--y)}
+.bar-fill.d{background:var(--r);box-shadow:0 0 3px var(--r)}
+.bar-pct{font-size:9px;color:var(--tx);white-space:nowrap}
+
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g);animation:pulse 2s ease infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.6)}}
+
+/* ── TABS ── */
+.tabs{flex-shrink:0;display:flex;gap:4px}
+.tab{
+  flex:1;padding:7px;text-align:center;font-family:var(--mono);font-size:10px;
+  background:var(--bg2);border:1px solid var(--bdr);border-radius:3px;
+  color:#3a5a3a;cursor:pointer;letter-spacing:.08em;transition:all .15s;
+}
+.tab:hover{border-color:#2a4a2a;color:var(--tx)}
+.tab.active{border-color:var(--g);color:var(--g);background:#071007;box-shadow:0 0 8px var(--gd)}
+
+/* ── SEARCH ── */
+.searchbar{
+  flex-shrink:0;display:flex;align-items:center;gap:8px;
+  padding:0 10px;background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:3px;transition:border-color .2s;
+}
+.searchbar:focus-within{border-color:var(--g);box-shadow:0 0 6px var(--gd)}
+.searchbar input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:var(--mono);font-size:12px;color:var(--txb);padding:8px 0;
+}
+.searchbar input::placeholder{color:#233023}
+.s-icon{color:var(--g);font-size:11px}
+.s-count{font-size:9px;color:#3a5a3a;white-space:nowrap}
+.s-count b{color:var(--c)}
+
+/* ── PANELS ── */
+.panel{
+  flex:1;min-height:0;display:flex;flex-direction:column;
+  background:var(--bg2);border:1px solid var(--bdr);border-radius:4px;overflow:hidden;
+}
+.panel-hdr{
+  flex-shrink:0;padding:7px 12px;border-bottom:1px solid var(--bdr);
+  font-size:9px;color:#3a5a3a;letter-spacing:.1em;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-hdr::before{content:'';width:2px;height:10px;background:var(--g);box-shadow:0 0 4px var(--g);border-radius:1px}
+.plist{overflow-y:auto;flex:1;padding:5px}
+.plist::-webkit-scrollbar{width:2px}
+.plist::-webkit-scrollbar-thumb{background:var(--g)}
+
+/* ── PKG ITEM (installed) ── */
+.pkg{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 9px;margin-bottom:3px;
+  background:var(--bg3);border:1px solid #0d1a0d;border-left:2px solid var(--g);
+  border-radius:3px;transition:all .12s;animation:pin .25s ease backwards;
+  gap:8px;
+}
+@keyframes pin{from{opacity:0;transform:translateX(-6px)}}
+.pkg:hover{background:#09150a;border-color:var(--g);box-shadow:0 0 7px var(--gd)}
+.pkg.removing{border-left-color:var(--r);opacity:.35;pointer-events:none}
+.pkg.updating{border-left-color:var(--y);opacity:.55;pointer-events:none}
+
+.pkg-info{flex:1;min-width:0}
+.pkg-name{font-size:12px;color:var(--txb);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkg-meta{font-size:9px;color:#2e4e2e;margin-top:2px;display:flex;gap:8px}
+.pkg-meta .ver{color:#3a6a3a}
+.pkg-meta .sz{color:#2a4a2a}
+
+/* ── PKG PROGRESS BAR ── */
+.pkg-progress{
+  position:absolute;bottom:0;left:0;height:2px;width:0%;
+  border-radius:0 0 3px 3px;
+  transition:width .3s ease;
+}
+.pkg-progress.rm{background:var(--r);box-shadow:0 0 4px var(--r)}
+.pkg-progress.up{background:var(--y);box-shadow:0 0 4px var(--y)}
+.pkg-progress.anim{animation:pgfill 4s ease forwards}
+@keyframes pgfill{0%{width:0%}85%{width:90%}100%{width:95%}}
+.pkg-progress.done{width:100%!important;transition:width .15s ease}
+.pkg{position:relative;overflow:hidden}
+
+.pkg-btns{display:flex;gap:4px;flex-shrink:0}
+.btn{
+  font-family:var(--mono);font-size:9px;padding:4px 9px;
+  border-radius:2px;cursor:pointer;letter-spacing:.06em;transition:all .12s;border:1px solid;
+}
+.btn-del{background:transparent;border-color:#2a0c14;color:#6a3a3a}
+.btn-del:hover{background:var(--r);border-color:var(--r);color:#fff;box-shadow:0 0 7px #ff335560}
+.btn-up{background:transparent;border-color:#0d2a0d;color:#3a6a3a}
+.btn-up:hover{background:var(--g);border-color:var(--g);color:var(--bg);box-shadow:0 0 7px var(--gd)}
+
+/* ── STORE ITEM ── */
+.store-item{
+  padding:9px 10px;margin-bottom:4px;
+  background:var(--bg3);border:1px solid #0d1a0d;border-left:2px solid #1a4a2a;
+  border-radius:3px;transition:all .12s;animation:pin .25s ease backwards;
+}
+.store-item:hover{background:#09150a;border-left-color:var(--c)}
+.store-row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.store-name{font-size:12px;color:var(--txb);font-weight:bold}
+.store-ver{font-size:9px;color:#2a4a4a}
+.store-desc{font-size:10px;color:#4a7a4a;margin-top:4px;line-height:1.4}
+.btn-open{background:transparent;border-color:#003a4a;color:#3a8a8a}
+.btn-open:hover{background:var(--c);border-color:var(--c);color:var(--bg);box-shadow:0 0 7px #00e5ff60}
+.btn-inst.installed{border-color:#2a4a2a;color:#2a4a2a;cursor:default;pointer-events:none}
+.store-loading{text-align:center;padding:24px;color:#2a4a2a;font-size:11px}
+.store-err{text-align:center;padding:24px;color:#6a2a2a;font-size:11px}
+
+/* ── SPINNER ── */
+.spin{display:inline-block;width:9px;height:9px;border:1px solid transparent;border-top-color:var(--g);border-radius:50%;animation:sp .5s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:32px;color:#1a3a1a;font-size:11px}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:12px;left:50%;
+  transform:translateX(-50%) translateY(60px);
+  background:var(--bg2);border:1px solid var(--g);color:var(--g);
+  font-size:11px;padding:7px 16px;border-radius:3px;
+  box-shadow:0 0 14px var(--gd);transition:transform .25s ease;
+  z-index:100;letter-spacing:.05em;white-space:nowrap;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--r);color:var(--r);box-shadow:0 0 14px #ff335540}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div class="bl">BIOS v2.4.1 ................ OK</div>
+  <div class="bl">KERNEL AARCH64 ............. LOADED</div>
+  <div class="bl">TERMUX RUNTIME ............. ACTIVE</div>
+  <div class="bl">FLASK :8080 ................ LISTENING</div>
+  <div class="bl">PKG DATABASE ............... INDEXING</div>
+  <div class="bl">SYSTEM MONITOR ............. ENABLED</div>
+  <div class="bl">NETWORK .................... LOCALHOST</div>
+  <div class="bl">AUTH ....................... LOCAL BYPASS</div>
+  <div class="bl">████████████████████ 100%</div>
+  <div class="bl">[ TERMUX::PANEL ] — ALL SYSTEMS GO</div>
+  <div class="bl">_</div>
+</div>
+
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="logo">TERMUX<em>::</em>PANEL</div>
+      <a class="tg-link" href="https://t.me/aniartx" target="_blank">t.me/aniartx</a>
+    </div>
+    <div class="topbar-row2">
+      <div class="stat-block">
+        <div class="stat-lbl">CPU CORES</div>
+        <div class="stat-val">{{sys.cpu}} CORE</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-lbl">RAM  {{sys.ram_used}}G / {{sys.ram_total}}G</div>
+        <div class="bar-row">
+          <div class="bar-track">
+            <div class="bar-fill {% if sys.ram_pct > 80 %}d{% elif sys.ram_pct > 60 %}w{% endif %}"
+                 style="width:{{sys.ram_pct}}%"></div>
+          </div>
+          <span class="bar-pct">{{sys.ram_pct}}%</span>
+        </div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-lbl">DISK  {{sys.used}} / {{sys.storage}}</div>
+        <div class="bar-row">
+          <div class="bar-track">
+            <div class="bar-fill {% if sys.disk_pct > 80 %}d{% elif sys.disk_pct > 60 %}w{% endif %}"
+                 style="width:{{sys.disk_pct}}%"></div>
+          </div>
+          <span class="bar-pct">{{sys.disk_pct}}%</span>
+        </div>
+      </div>
+      <div class="pulse"></div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="installed" onclick="switchTab('installed',this)">
+      ▣ INSTALLED ({{pkgs|length}})
+    </div>
+    <div class="tab" data-tab="store" onclick="switchTab('store',this)">
+      ⊕ STORE
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="searchbar">
+    <span class="s-icon">⌕</span>
+    <input type="text" id="search" placeholder="search packages..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="s-count">SHOW: <b id="vis-count">{{pkgs|length}}</b> / <b>{{pkgs|length}}</b></div>
+  </div>
+
+  <!-- INSTALLED PANEL -->
+  <div class="panel" id="tab-installed">
+    <div class="panel-hdr">INSTALLED PACKAGES</div>
+    <div class="plist" id="pkg-list">
+      {% for p in pkgs %}
+      <div class="pkg" id="box-{{p.name}}" data-name="{{p.name}}">
+        <div class="pkg-info">
+          <div class="pkg-name">{{p.name}}</div>
+          <div class="pkg-meta">
+            <span class="ver">v{{p.version}}</span>
+            <span class="sz">{{p.size}}</span>
+          </div>
+        </div>
+        <div class="pkg-btns">
+          <button class="btn btn-del" onclick="runAction('{{p.name}}','remove')">DEL</button>
+          <button class="btn btn-up"  onclick="runAction('{{p.name}}','update')">UP</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- STORE PANEL -->
+  <div class="panel" id="tab-store" style="display:none">
+    <div class="panel-hdr">
+      AVAILABLE PACKAGES — local db
+      {% if pkgdb %}
+        &nbsp;·&nbsp;<span style="color:var(--c)">{{pkgdb.count}} pkgs</span>
+        &nbsp;·&nbsp;<span style="color:#3a5a3a">updated {{pkgdb.updated}}</span>
+      {% else %}
+        &nbsp;·&nbsp;<span style="color:var(--r)">pkgdb not found — run: python update_pkgdb.py</span>
+      {% endif %}
+    </div>
+    <div class="searchbar" style="border:none;border-bottom:1px solid var(--bdr);border-radius:0;flex-shrink:0">
+      <span class="s-icon">⌕</span>
+      <input type="text" id="store-search" placeholder="search available packages..." autocomplete="off" spellcheck="false">
+      <div class="s-count" id="store-count"></div>
+    </div>
+    <div class="plist" id="store-list">
+      <div class="store-loading" id="store-loader">⟳ loading package registry...</div>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+// installed pkg names for store badge
+const installedSet = new Set({{ pkgs | map(attribute='name') | list | tojson }});
+const totalInstalled = {{ pkgs|length }};
+
+// ─── TAB SWITCH ───
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-installed').style.display = id === 'installed' ? '' : 'none';
+  document.getElementById('tab-store').style.display     = id === 'store'     ? '' : 'none';
+  document.getElementById('search').parentElement.style.display = id === 'installed' ? '' : 'none';
+  if (id === 'store' && !storeLoaded) loadStore();
+}
+
+// ─── INSTALLED SEARCH ───
+document.getElementById('search').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  let v = 0;
+  document.querySelectorAll('#pkg-list .pkg').forEach(el => {
+    const show = !q || el.dataset.name.toLowerCase().includes(q);
+    el.style.display = show ? '' : 'none';
+    if (show) v++;
+  });
+  document.getElementById('vis-count').textContent = v;
+});
+
+// ─── PKG ACTION ───
+function runAction(pkg, type) {
+  const box = document.getElementById('box-' + pkg);
+  if (!box) return;
+  const isRm = type === 'remove';
+
+  // نوار پیشرفت داخل کادر
+  let bar = box.querySelector('.pkg-progress');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'pkg-progress';
+    box.appendChild(bar);
+  }
+  bar.className = 'pkg-progress ' + (isRm ? 'rm' : 'up');
+  // force reflow برای reset انیمیشن
+  void bar.offsetWidth;
+  bar.classList.add('anim');
+
+  box.classList.add(isRm ? 'removing' : 'updating');
+  const btns = box.querySelectorAll('.btn');
+  btns.forEach(b => b.disabled = true);
+  const target = isRm ? box.querySelector('.btn-del') : box.querySelector('.btn-up');
+  target.innerHTML = '<span class="spin"></span>';
+
+  fetch('/' + type, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({pkg})
+  })
+  .then(r => r.json())
+  .then(() => {
+    // نوار رو تا ۱۰۰٪ ببر
+    bar.classList.remove('anim');
+    bar.classList.add('done');
+
+    if (isRm) {
+      setTimeout(() => {
+        box.style.transition = 'all .25s ease';
+        box.style.transform = 'translateX(14px)';
+        box.style.opacity = '0';
+        setTimeout(() => { box.remove(); updateVisCount(); }, 260);
+      }, 200);
+      toast('[ ' + pkg + ' ] REMOVED');
+      installedSet.delete(pkg);
+    } else {
+      setTimeout(() => {
+        bar.style.transition = 'opacity .4s ease';
+        bar.style.opacity = '0';
+        setTimeout(() => bar.remove(), 400);
+        box.classList.remove('updating');
+        btns.forEach(b => b.disabled = false);
+        target.textContent = 'UP';
+      }, 300);
+      toast('[ ' + pkg + ' ] UPDATED');
+    }
+  })
+  .catch(() => {
+    bar.remove();
+    box.classList.remove('removing','updating');
+    btns.forEach(b => b.disabled = false);
+    target.textContent = isRm ? 'DEL' : 'UP';
+    toast('ERROR: COMMAND FAILED', true);
+  });
+}
+
+function updateVisCount() {
+  const v = document.querySelectorAll('#pkg-list .pkg:not([style*="display: none"])').length;
+  document.getElementById('vis-count').textContent = v;
+}
+
+// ─── STORE ───
+let storeLoaded = false;
+let allStorePkgs = [];
+
+async function loadStore() {
+  storeLoaded = true;
+  const loader = document.getElementById('store-loader');
+  try {
+    // از فایل لوکال می‌خونه — نیازی به اینترنت نیست
+    const res = await fetch('/pkgdb.json');
+    if (!res.ok) {
+      loader.className = 'store-err';
+      loader.innerHTML = '✗ pkgdb.json not found<br><span style="color:#3a5a3a;font-size:10px">run: python update_pkgdb.py</span>';
+      return;
+    }
+    const data = await res.json();
+    // ساختار: {updated_at, count, packages:[...]}
+    allStorePkgs = Array.isArray(data) ? data : (data.packages || Object.values(data));
+    loader.remove();
+    renderStore(allStorePkgs);
+  } catch(e) {
+    loader.className = 'store-err';
+    loader.innerHTML = '✗ error loading pkgdb<br><span style="color:#3a5a3a;font-size:10px">run: python update_pkgdb.py</span>';
+  }
+}
+
+function renderStore(pkgs) {
+  const list = document.getElementById('store-list');
+  list.querySelectorAll('.store-item').forEach(el => el.remove());
+  const frag = document.createDocumentFragment();
+  pkgs.slice(0, 300).forEach((p, i) => {
+    const name = p.name || p.pkg || '';
+    const ver  = p.version || '';
+    const desc = p.description || p.desc || '';
+    const url  = p.homepage || p.url || '';
+    const inst = installedSet.has(name);
+    const div = document.createElement('div');
+    div.className = 'store-item';
+    div.dataset.name = name;
+    div.style.animationDelay = Math.min(i * 0.012, 1) + 's';
+
+    // دکمه OPEN — باز کردن homepage در مرورگر
+    const openBtn = url
+      ? `<a class="btn btn-open" href="${esc(url)}" target="_blank" rel="noopener">OPEN ↗</a>`
+      : `<span class="btn btn-open" style="opacity:.3;pointer-events:none">NO URL</span>`;
+
+    // بج "installed" اگه نصب شده
+    const instBadge = inst
+      ? `<span style="font-size:8px;color:#2a6a3a;border:1px solid #1a4a2a;padding:2px 6px;border-radius:2px;margin-right:4px">✓ INSTALLED</span>`
+      : '';
+
+    div.innerHTML = `
+      <div class="store-row1">
+        <div style="min-width:0;flex:1">
+          <span class="store-name">${esc(name)}</span>
+          ${ver ? '<span class="store-ver"> v' + esc(ver) + '</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          ${instBadge}${openBtn}
+        </div>
+      </div>
+      ${desc ? '<div class="store-desc">' + esc(desc) + '</div>' : ''}
+    `;
+    frag.appendChild(div);
+  });
+  list.appendChild(frag);
+  document.getElementById('store-count').innerHTML =
+    'SHOW: <b>' + Math.min(pkgs.length, 300) + '</b> / <b>' + pkgs.length + '</b>';
+}
+
+document.getElementById('store-search').addEventListener('input', function() {
+  if (!storeLoaded || !allStorePkgs.length) return;
+  const q = this.value.toLowerCase().trim();
+  const filtered = q
+    ? allStorePkgs.filter(p => {
+        const name = (p.name || p.pkg || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      })
+    : allStorePkgs;
+  renderStore(filtered);
+});
+
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── TOAST ───
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isErr ? 'err show' : 'show';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// stagger installed list
+document.querySelectorAll('#pkg-list .pkg').forEach((el,i) => {
+  el.style.animationDelay = Math.min(i * 0.02, 1.2) + 's';
+});
+</script>
+</body>
+</html>
