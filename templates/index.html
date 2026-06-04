@@ -227,6 +227,14 @@ body::before{
 .btn-inst.installed{border-color:#2a4a2a;color:#2a4a2a;cursor:default;pointer-events:none}
 .store-loading{text-align:center;padding:24px;color:#2a4a2a;font-size:11px}
 .store-err{text-align:center;padding:24px;color:#6a2a2a;font-size:11px}
+.load-more{
+  text-align:center;padding:10px;margin:4px 0 6px;
+  font-size:10px;color:#3a6a4a;letter-spacing:.1em;
+  border:1px dashed #1a3a2a;border-radius:3px;
+  cursor:pointer;transition:all .15s;
+}
+.load-more:hover{border-color:var(--g);color:var(--g);background:#071007;box-shadow:0 0 6px var(--gd)}
+.load-more span{color:#2a4a2a;font-size:9px;margin-left:6px}
 
 /* ── SPINNER ── */
 .spin{display:inline-block;width:9px;height:9px;border:1px solid transparent;border-top-color:var(--g);border-radius:50%;animation:sp .5s linear infinite}
@@ -486,11 +494,31 @@ async function loadStore() {
   }
 }
 
+const PAGE = 50; // تعداد آیتم در هر بار
+let currentPkgList = [];
+let currentPage = 0;
+
 function renderStore(pkgs) {
+  currentPkgList = pkgs;
+  currentPage = 0;
   const list = document.getElementById('store-list');
-  list.querySelectorAll('.store-item').forEach(el => el.remove());
+  list.querySelectorAll('.store-item, .load-more').forEach(el => el.remove());
+  appendStorePage();
+  document.getElementById('store-count').innerHTML =
+    'SHOW: <b id="shown-count">' + Math.min(PAGE, pkgs.length) + '</b> / <b>' + pkgs.length + '</b>';
+}
+
+function appendStorePage() {
+  const list = document.getElementById('store-list');
+  // دکمه قبلی رو حذف کن
+  const oldBtn = list.querySelector('.load-more');
+  if (oldBtn) oldBtn.remove();
+
+  const start = currentPage * PAGE;
+  const slice = currentPkgList.slice(start, start + PAGE);
   const frag = document.createDocumentFragment();
-  pkgs.slice(0, 300).forEach((p, i) => {
+
+  slice.forEach((p, i) => {
     const name = p.name || p.pkg || '';
     const ver  = p.version || '';
     const desc = p.description || p.desc || '';
@@ -499,14 +527,12 @@ function renderStore(pkgs) {
     const div = document.createElement('div');
     div.className = 'store-item';
     div.dataset.name = name;
-    div.style.animationDelay = Math.min(i * 0.012, 1) + 's';
+    div.style.animationDelay = Math.min(i * 0.015, 0.6) + 's';
 
-    // دکمه OPEN — باز کردن homepage در مرورگر
     const openBtn = url
       ? `<a class="btn btn-open" href="${esc(url)}" target="_blank" rel="noopener">OPEN ↗</a>`
       : `<span class="btn btn-open" style="opacity:.3;pointer-events:none">NO URL</span>`;
 
-    // بج "installed" اگه نصب شده
     const instBadge = inst
       ? `<span style="font-size:8px;color:#2a6a3a;border:1px solid #1a4a2a;padding:2px 6px;border-radius:2px;margin-right:4px">✓ INSTALLED</span>`
       : '';
@@ -525,9 +551,25 @@ function renderStore(pkgs) {
     `;
     frag.appendChild(div);
   });
+
+  currentPage++;
+  const shown = currentPage * PAGE;
+
+  // اگه هنوز آیتم بیشتری هست، دکمه MORE بزار
+  if (shown < currentPkgList.length) {
+    const btn = document.createElement('div');
+    btn.className = 'load-more';
+    const remaining = currentPkgList.length - shown;
+    btn.innerHTML = `▼ LOAD MORE <span>(${remaining} remaining)</span>`;
+    btn.onclick = () => {
+      appendStorePage();
+      const sc = document.getElementById('shown-count');
+      if (sc) sc.textContent = Math.min(currentPage * PAGE, currentPkgList.length);
+    };
+    frag.appendChild(btn);
+  }
+
   list.appendChild(frag);
-  document.getElementById('store-count').innerHTML =
-    'SHOW: <b>' + Math.min(pkgs.length, 300) + '</b> / <b>' + pkgs.length + '</b>';
 }
 
 document.getElementById('store-search').addEventListener('input', function() {
