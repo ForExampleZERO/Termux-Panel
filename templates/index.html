@@ -227,14 +227,18 @@ body::before{
 .btn-inst.installed{border-color:#2a4a2a;color:#2a4a2a;cursor:default;pointer-events:none}
 .store-loading{text-align:center;padding:24px;color:#2a4a2a;font-size:11px}
 .store-err{text-align:center;padding:24px;color:#6a2a2a;font-size:11px}
-.load-more{
-  text-align:center;padding:10px;margin:4px 0 6px;
-  font-size:10px;color:#3a6a4a;letter-spacing:.1em;
-  border:1px dashed #1a3a2a;border-radius:3px;
-  cursor:pointer;transition:all .15s;
+.scroll-sentinel{
+  height:40px;display:flex;align-items:center;justify-content:center;
+  margin:4px 0 8px;flex-shrink:0;
 }
-.load-more:hover{border-color:var(--g);color:var(--g);background:#071007;box-shadow:0 0 6px var(--gd)}
-.load-more span{color:#2a4a2a;font-size:9px;margin-left:6px}
+.scroll-sentinel .dot{
+  width:4px;height:4px;border-radius:50%;background:var(--g);opacity:0;
+  display:inline-block;margin:0 3px;
+  animation:dotpulse 1.2s ease infinite;
+}
+.scroll-sentinel .dot:nth-child(2){animation-delay:.2s}
+.scroll-sentinel .dot:nth-child(3){animation-delay:.4s}
+@keyframes dotpulse{0%,80%,100%{opacity:0;transform:scale(.6)}40%{opacity:1;transform:scale(1)}}
 
 /* ── SPINNER ── */
 .spin{display:inline-block;width:9px;height:9px;border:1px solid transparent;border-top-color:var(--g);border-radius:50%;animation:sp .5s linear infinite}
@@ -476,7 +480,6 @@ async function loadStore() {
   storeLoaded = true;
   const loader = document.getElementById('store-loader');
   try {
-    // از فایل لوکال می‌خونه — نیازی به اینترنت نیست
     const res = await fetch('/pkgdb.json');
     if (!res.ok) {
       loader.className = 'store-err';
@@ -484,7 +487,6 @@ async function loadStore() {
       return;
     }
     const data = await res.json();
-    // ساختار: {updated_at, count, packages:[...]}
     allStorePkgs = Array.isArray(data) ? data : (data.packages || Object.values(data));
     loader.remove();
     renderStore(allStorePkgs);
@@ -494,28 +496,43 @@ async function loadStore() {
   }
 }
 
-const PAGE = 50; // تعداد آیتم در هر بار
+const PAGE = 40;
 let currentPkgList = [];
 let currentPage = 0;
+let scrollObserver = null;
 
 function renderStore(pkgs) {
   currentPkgList = pkgs;
   currentPage = 0;
+
   const list = document.getElementById('store-list');
-  list.querySelectorAll('.store-item, .load-more').forEach(el => el.remove());
+  // حذف همه چیز به جز loader (که قبلاً remove شده)
+  list.querySelectorAll('.store-item, .scroll-sentinel').forEach(el => el.remove());
+
+  // disconnect observer قبلی
+  if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+
   appendStorePage();
+  updateStoreCount();
+}
+
+function updateStoreCount() {
+  const shown = Math.min(currentPage * PAGE, currentPkgList.length);
   document.getElementById('store-count').innerHTML =
-    'SHOW: <b id="shown-count">' + Math.min(PAGE, pkgs.length) + '</b> / <b>' + pkgs.length + '</b>';
+    'SHOW: <b id="shown-count">' + shown + '</b> / <b>' + currentPkgList.length + '</b>';
 }
 
 function appendStorePage() {
   const list = document.getElementById('store-list');
-  // دکمه قبلی رو حذف کن
-  const oldBtn = list.querySelector('.load-more');
-  if (oldBtn) oldBtn.remove();
+
+  // sentinel قبلی رو حذف کن
+  const oldSentinel = list.querySelector('.scroll-sentinel');
+  if (oldSentinel) { oldSentinel.remove(); }
 
   const start = currentPage * PAGE;
   const slice = currentPkgList.slice(start, start + PAGE);
+  if (!slice.length) return;
+
   const frag = document.createDocumentFragment();
 
   slice.forEach((p, i) => {
@@ -527,7 +544,7 @@ function appendStorePage() {
     const div = document.createElement('div');
     div.className = 'store-item';
     div.dataset.name = name;
-    div.style.animationDelay = Math.min(i * 0.015, 0.6) + 's';
+    div.style.animationDelay = Math.min(i * 0.012, 0.5) + 's';
 
     const openBtn = url
       ? `<a class="btn btn-open" href="${esc(url)}" target="_blank" rel="noopener">OPEN ↗</a>`
@@ -553,23 +570,26 @@ function appendStorePage() {
   });
 
   currentPage++;
-  const shown = currentPage * PAGE;
-
-  // اگه هنوز آیتم بیشتری هست، دکمه MORE بزار
-  if (shown < currentPkgList.length) {
-    const btn = document.createElement('div');
-    btn.className = 'load-more';
-    const remaining = currentPkgList.length - shown;
-    btn.innerHTML = `▼ LOAD MORE <span>(${remaining} remaining)</span>`;
-    btn.onclick = () => {
-      appendStorePage();
-      const sc = document.getElementById('shown-count');
-      if (sc) sc.textContent = Math.min(currentPage * PAGE, currentPkgList.length);
-    };
-    frag.appendChild(btn);
-  }
-
   list.appendChild(frag);
+  updateStoreCount();
+
+  // اگه هنوز آیتم مونده، sentinel بذار
+  if (currentPage * PAGE < currentPkgList.length) {
+    const sentinel = document.createElement('div');
+    sentinel.className = 'scroll-sentinel';
+    sentinel.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+    list.appendChild(sentinel);
+
+    if (scrollObserver) scrollObserver.disconnect();
+    scrollObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        scrollObserver.disconnect();
+        scrollObserver = null;
+        appendStorePage();
+      }
+    }, { root: list, threshold: 0.1 });
+    scrollObserver.observe(sentinel);
+  }
 }
 
 document.getElementById('store-search').addEventListener('input', function() {
